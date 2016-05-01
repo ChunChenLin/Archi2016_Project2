@@ -371,6 +371,8 @@ int main() {
 
         snapShotForReg();
 
+        update();
+
         WB();
         DM();
         EX();

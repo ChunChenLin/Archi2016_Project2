@@ -21,6 +21,8 @@ void DM();
 
 void WB();
 
+void update();
+
 void move();
 
 #endif
