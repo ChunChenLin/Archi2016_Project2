@@ -17,10 +17,6 @@ unsigned Instruction::func;
 unsigned Instruction::shamt;
 unsigned Instruction::immediate;
 
-bool Terminal::IF_halt;
-bool Terminal::ID_halt;
-bool Terminal::EX_halt;
-bool Terminal::DM_halt;
 bool Terminal::WB_halt;
 bool Terminal::write2Zero;
 bool Terminal::numberOverflow;

@@ -1,8 +1,6 @@
 #ifndef DEFINE_H
 #define DEFINE_H
 
-#define ERROR 0xffffffff
-
 #define R      0
 #define ADD   32
 #define ADDU  33
