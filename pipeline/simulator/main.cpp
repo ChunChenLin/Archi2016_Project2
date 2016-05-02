@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <string>
 
 #include "global.h"
 #include "define.h"
@@ -17,6 +19,10 @@ Buffer DM_WB;
 Buffer WB_END;
 bool STALL;
 
+//map<int, string> ins;
+//map<int, string> rIns;
+char* ins[65];
+char* rIns[45];
 
 void Open() {
     iimage = fopen("iimage.bin", "rb");
@@ -78,6 +84,47 @@ void IImg() {
     for(int i=8; i<8+4*num; i++) {
         Memory::IMemory[index++] = iimageBuffer[i];
     }
+}
+
+void setInstructions(){ // fast transfer
+    // R
+    rIns[ADD] = "ADD";
+    rIns[ADDU] = "ADDU";
+    rIns[SUB] = "SUB";
+    rIns[AND] = "AND";
+    rIns[OR] = "OR";
+    rIns[XOR] = "XOR";
+    rIns[NOR] = "NOR";
+    rIns[NAND] = "NAND";
+    rIns[SLT] = "SLT";
+    rIns[SLL] = "SLL";
+    rIns[SRL] = "SRL";
+    rIns[SRA] = "SRA";
+    rIns[JR] = "JR";
+    // I
+    ins[ADDI] = "ADDI";
+    ins[ADDIU] = "ADDIU";
+    ins[LW] = "LW";
+    ins[LH] = "LH";
+    ins[LHU] = "LHU";
+    ins[LB] = "LB";
+    ins[LBU] = "LBU";
+    ins[SW] = "SW";
+    ins[SH] = "SH";
+    ins[SB] = "SB";
+    ins[LUI] = "LUI";
+    ins[ANDI] = "ANDI";
+    ins[ORI] = "ORI";
+    ins[NORI] = "NORI";
+    ins[SLTI] = "SLTI";
+    ins[BEQ] = "BEQ";
+    ins[BNE] = "BNE";
+    ins[BGTZ] = "BGTZ";
+    // J
+    ins[J] = "J";
+    ins[JAL] = "JAL";
+    // S
+    ins[HALT] = "HALT";
 }
 
 void errorDump() {
@@ -269,7 +316,7 @@ void snapShotForReg() {
         //printf("$%02d: 0x", i);
         //printf("%08X\n", Register::reg[i]);
     }
-
+    
     if (ID_EX.pc_src_out) {
         fprintf(snapshot, "PC: 0x%08X\n", ID_EX.pc_out);
         //printf("PC: 0x%08X\n", ID_EX.pc_out);
@@ -289,8 +336,9 @@ void snapShotForReg() {
             //printf("%02X", Memory::IMemory[Register::PC + i] & 0xff);
         }
     }
+    
 }
-
+/*
 void snapShotForStages() {
     if (STALL) {
         fprintf(snapshot, " to_be_stalled");
@@ -352,6 +400,43 @@ void snapShotForStages() {
     fprintf(snapshot, "\n\n\n");
     //printf("\n\n\n");
 }
+*/
+
+void print() {
+/*------------------------------------------------------*/
+    if (STALL) {
+        fprintf(snapshot, " to_be_stalled");
+    } else if (ID_EX.pc_src_in == 1) {
+        fprintf(snapshot, " to_be_flushed");
+    }
+    fprintf(snapshot, "\n");
+/*------------------------------------------------------*/
+    bool isNOP = false;
+
+    isNOP = (ID_EX.pc_src_out)||(IF_ID.opcode_out==R && IF_ID.funct_out==SLL && IF_ID.rt_out==0 && IF_ID.rd_out==0 && IF_ID.shamt_out==0);
+    fprintf(snapshot, "ID: %s%s", (isNOP) ? "NOP" : (IF_ID.opcode_out == R) ? rIns[IF_ID.funct_out] : ins[IF_ID.opcode_out], (STALL) ? " to_be_stalled" : "");
+    if(!STALL && (Forward::rs2ID||Forward::rt2ID))fprintf(snapshot, " fwd_EX-DM_%s_$%d", (Forward::rs2ID) ? "rs" : "rt", (Forward::rs2ID) ? IF_ID.rs_out : IF_ID.rt_out);
+    fprintf(snapshot, "\n");
+
+    isNOP = ID_EX.opcode_out==R && ID_EX.funct_out==SLL && ID_EX.rt_out==0 && ID_EX.rd_out==0 && ID_EX.shamt_out==0;
+    fprintf(snapshot, "EX: %s", (isNOP) ? "NOP" : (ID_EX.opcode_out == R) ? rIns[ID_EX.funct_out] : ins[ID_EX.opcode_out]);
+    if(!STALL && (Forward::rs2EX||Forward::rt2EX))fprintf(snapshot, " fwd_EX-DM_%s_$%d", (Forward::rs2EX) ? "rs" : "rt", (Forward::rs2EX) ? ID_EX.rs_out : ID_EX.rt_out);
+    fprintf(snapshot, "\n");
+
+    isNOP = EX_DM.opcode_out==R && EX_DM.funct_out==SLL && EX_DM.rt_out==0 && EX_DM.rd_out==0 && EX_DM.shamt_out==0;
+    fprintf(snapshot, "DM: %s\n", (isNOP) ? "NOP" : (EX_DM.opcode_out == R) ? rIns[EX_DM.funct_out] : ins[EX_DM.opcode_out]);
+    
+    isNOP = DM_WB.opcode_out==R && DM_WB.funct_out==SLL && DM_WB.rt_out==0 && DM_WB.rd_out==0 && DM_WB.shamt_out==0;
+    fprintf(snapshot, "WB: %s\n", (isNOP) ? "NOP" : (DM_WB.opcode_out == R) ? rIns[DM_WB.funct_out] : ins[DM_WB.opcode_out]);
+    fprintf(snapshot, "\n\n");
+} 
+
+void initialize() {
+    memset(&IF_ID, 0, sizeof(IF_ID));
+    memset(&ID_EX, 0, sizeof(ID_EX));
+    memset(&EX_DM, 0, sizeof(EX_DM));
+    memset(&DM_WB, 0, sizeof(DM_WB));
+}
 
 int main() {
     Open();
@@ -363,6 +448,9 @@ int main() {
     Terminal::numberOverflow = false;
     Terminal::memoryOverflow = false;
 	Terminal::dataMisaaligned = false;
+
+    initialize();
+    setInstructions();
 
     // IF instr-> detect stall -> snapshot -> assign reg memory ->  move buffer
     while(!(Terminal::WB_halt || Terminal::memoryOverflow || Terminal::dataMisaaligned)) {
@@ -379,7 +467,8 @@ int main() {
         ID();
         IF();
 
-        snapShotForStages();
+        //snapShotForStages();
+        print();
 
         /*DM2WB();
         EX2DM();
