@@ -74,6 +74,8 @@ void IImg() {
     for(int i=0; i<4; i++) {
         tmp = (tmp<<8) + (unsigned char)iimageBuffer[i];
     }
+    IF_ID.pc_plus_four_out = tmp;
+    //printf("---IF_ID.pc_plus_four_out= 0x%08X\n\n",IF_ID.pc_plus_four_out);
     Register::PC = tmp;
 
     for(int i=4; i<8; i++) {
@@ -129,22 +131,18 @@ void setInstructions(){ // fast transfer
 
 void errorDump() {
     if (Terminal::write2Zero) {
-        //Terminal::write2Zero = false;
         fprintf(error_dump, "In cycle %d: Write $0 Error\n", Register::cycle);
         //printf("In cycle %d: Write $0 Error\n", Register::cycle);
     }
     if (Terminal::memoryOverflow) {
-        //Terminal::memoryOverflow = false;
         fprintf(error_dump, "In cycle %d: Address Overflow\n", Register::cycle);
         //printf("In cycle %d: Address Overflow\n", Register::cycle);
     }
     if (Terminal::dataMisaaligned) {
-        //Terminal::dataMisaaligned = false;
         fprintf(error_dump, "In cycle %d: Misalignment Error\n", Register::cycle);
         //printf("In cycle %d: Misalignment Error\n", Register::cycle);
     }
     if (Terminal::numberOverflow) {
-        //Terminal::numberOverflow = false;
         fprintf(error_dump, "In cycle %d: Number Overflow\n", Register::cycle);
         //printf("In cycle %d: Number Overflow\n", Register::cycle);
     }   
@@ -161,6 +159,7 @@ void snapShotForReg() {
     }
     
     if (ID_EX.pc_src_out) {
+        //printf("PC_SRC_OUT...\n");
         fprintf(snapshot, "PC: 0x%08X\n", ID_EX.pc_out);
         //printf("PC: 0x%08X\n", ID_EX.pc_out);
         fprintf(snapshot, "IF: 0x");
@@ -170,6 +169,7 @@ void snapShotForReg() {
             //printf("%02X", Memory::IMemory[ID_EX.pc_out + i] & 0xff);
         }
     } else {
+        //printf("else ...\n");
         fprintf(snapshot, "PC: 0x%08X\n", Register::PC);
         //printf("PC: 0x%08X\n", Register::PC);
         fprintf(snapshot, "IF: 0x");
@@ -183,14 +183,12 @@ void snapShotForReg() {
 }
 
 void snapShotForStages() {
-/*------------------------------------------------------*/
     if (STALL) {
         fprintf(snapshot, " to_be_stalled");
     } else if (ID_EX.pc_src_in == 1) {
         fprintf(snapshot, " to_be_flushed");
     }
     fprintf(snapshot, "\n");
-/*------------------------------------------------------*/
     bool isNOP = false;
 
     isNOP = (ID_EX.pc_src_out)||(IF_ID.opcode_out==R && IF_ID.funct_out==SLL && IF_ID.rt_out==0 && IF_ID.rd_out==0 && IF_ID.shamt_out==0);
@@ -223,30 +221,42 @@ void initialize() {
     memset(&DM_WB, 0, sizeof(DM_WB));
 }
 
+/*bool detectHalt() {
+    if ((Terminal::IF_HALT && Terminal::ID_HALT && Terminal::EX_HALT && Terminal::DM_HALT && Terminal::WB_HALT) || (Terminal::memoryOverflow || Terminal::dataMisaaligned)) return true;
+    else return false;
+}*/
+
 int main() {
+    initialize();
+
     Open();
     DImg();
     IImg();
 
-    Terminal::WB_halt = false;
+    //printf("---IF_ID.pc_plus_four_out= 0x%08X\n\n",IF_ID.pc_plus_four_out);
+    Terminal::IF_HALT = false;
+    Terminal::ID_HALT = false;
+    Terminal::EX_HALT = false;
+    Terminal::DM_HALT = false;
+    Terminal::WB_HALT = false;
 	Terminal::write2Zero = false;
     Terminal::numberOverflow = false;
     Terminal::memoryOverflow = false;
 	Terminal::dataMisaaligned = false;
 
-    initialize();
+    
     setInstructions();
 
     // IF instr-> detect stall -> snapshot -> assign reg memory ->  move buffer
-    while(!(Terminal::WB_halt || Terminal::memoryOverflow || Terminal::dataMisaaligned)) {
+    while(!(Terminal::WB_HALT || Terminal::memoryOverflow || Terminal::dataMisaaligned)) {
         Terminal::write2Zero = false;
         Terminal::numberOverflow = false;
         
-        checkForwarding();
         checkStall();
-
+        checkForwarding();
+        
         snapShotForReg();
-
+        
         update();
 
         WB();

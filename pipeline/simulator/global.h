@@ -22,7 +22,7 @@ public:
 
 class Terminal {
 public:
-	static bool WB_halt;
+	static bool IF_HALT, ID_HALT, EX_HALT, DM_HALT, WB_HALT;
 	//static bool halt;
 	static bool write2Zero, numberOverflow, memoryOverflow, dataMisaaligned;
 };
@@ -43,21 +43,21 @@ typedef struct _Buffer {
 	unsigned rd_in, rd_out;
 	unsigned rs_in, rs_out;
 
-	unsigned reg_dst_in, reg_dst_out;
+	//unsigned reg_dst_in, reg_dst_out;
 	unsigned alu_src_in, alu_src_out;
 
-	bool mem_read_in, mem_read_out, mem_write_in, mem_write_out;
-	unsigned mem_op_in, mem_op_out;
+	//bool mem_read_in, mem_read_out, mem_write_in, mem_write_out;
+	//unsigned mem_op_in, mem_op_out;
 
-	unsigned reg_write_in, reg_write_out;
-	unsigned mem_to_reg_in, mem_to_reg_out;
+	//unsigned reg_write_in, reg_write_out;
+	//unsigned mem_to_reg_in, mem_to_reg_out;
 
 	unsigned $rs_in, $rs_out;
 	unsigned $rt_in, $rt_out;
 	unsigned extended_imme_in, extended_imme_out;
 
 	bool pc_src_in, pc_src_out;
-	//bool needToStall;
+
 	unsigned pc_in, pc_out;
 	unsigned reg_to_write_in, reg_to_write_out;
 
@@ -72,6 +72,5 @@ extern Buffer IF_ID;
 extern Buffer ID_EX;
 extern Buffer EX_DM;
 extern Buffer DM_WB;
-extern Buffer WB_END;
 
 #endif
