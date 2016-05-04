@@ -136,5 +136,4 @@ void checkForwarding() {
 			if(EX_DM.reg_to_write_out == IF_ID.rs_out) Forward::rs2ID = true;
 		}
 	}
-
 }

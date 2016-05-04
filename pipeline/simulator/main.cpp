@@ -7,6 +7,7 @@
 #include "define.h"
 #include "check.h"
 #include "stages.h"
+#include "run.h"
 
 FILE *iimage, *dimage, *error_dump, *snapshot;
 unsigned iimageLen, dimageLen;
@@ -259,11 +260,13 @@ int main() {
         
         update();
 
-        WB();
+        /*WB();
         DM();
         EX();
         ID();
         IF();
+        */
+        run_pipeline();
 
         snapShotForStages();
 

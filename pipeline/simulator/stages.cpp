@@ -164,12 +164,14 @@ void EX() {
 		} 
 		else ID_EX.$rt_out = ID_EX.extended_imme_out;
 	}
+
 	unsigned left_sign; 
 	unsigned right_sign;
 	unsigned result_sign;
 	signed int Ileft = (int)ID_EX.$rs_out;
 	signed int Iright = (int)ID_EX.$rt_out;
 	signed int Iresult = Ileft + Iright;
+	
 	switch (EX_DM.opcode_in) {
 		case R:
 			switch (EX_DM.funct_in) {
