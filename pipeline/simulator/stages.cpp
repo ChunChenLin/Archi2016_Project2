@@ -8,7 +8,8 @@ inline void detectWrite2Zero() {
 				Terminal::write2Zero = true;
 				Register::reg[DM_WB.reg_to_write_out] = 0;
 			}
-		} else {
+		} 
+		else {
 			Terminal::write2Zero = true;
 			Register::reg[DM_WB.reg_to_write_out] = 0;
 		}
@@ -80,7 +81,6 @@ void IF() {
 	t2 = t2 >> 6 << 30 >> 30;
 	IF_ID.shamt_in = t1 + t2;
 
-	
 	Register::PC = Register::PC + 4;
 	IF_ID.pc_plus_four_in = Register::PC;
 }
@@ -95,11 +95,9 @@ void ID() {
 		ID_EX.rs_in = 0;
 		ID_EX.rt_in = 0;
 		ID_EX.rd_in = 0;
-
 		ID_EX.pc_src_in = 0;
 		ID_EX.pc_in = 0;
 		ID_EX.reg_to_write_in = 0;
-
 		ID_EX.$rs_in = 0;
 		ID_EX.$rt_in = 0;
 		ID_EX.extended_imme_in = 0;

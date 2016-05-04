@@ -1,9 +1,9 @@
 #include "check.h"
 
-void checkStall() {
-	STALL = false;
 	if (ID_EX.pc_src_out == 1) return;
 
+void checkStall() {
+	STALL = false;
 	bool IDLoad = (ID_EX.opcode_out == LW || ID_EX.opcode_out == LH || ID_EX.opcode_out == LHU || ID_EX.opcode_out == LB || ID_EX.opcode_out == LBU);
 	bool EXLoad = (EX_DM.opcode_out == LW || EX_DM.opcode_out == LH || EX_DM.opcode_out == LHU || EX_DM.opcode_out == LB || EX_DM.opcode_out == LBU);
 

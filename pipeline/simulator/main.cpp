@@ -260,12 +260,6 @@ int main() {
         
         update();
 
-        /*WB();
-        DM();
-        EX();
-        ID();
-        IF();
-        */
         run_pipeline();
 
         snapShotForStages();
