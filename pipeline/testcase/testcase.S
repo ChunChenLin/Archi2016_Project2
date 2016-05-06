@@ -1,73 +1,46 @@
+#PC = 1c
 addi  $1, $0, 0x7FFF
 
 sll   $1, $1, 16
 
-ori   $1, $1, 0xFFFF 
+ori   $1, $1, 0xFFFF #$1 = 7FFFFFFF
 
-addi  $2, $0, 2      
+addi  $2, $0, 2      #$2 = 2
 
-add   $3, $1, $2     
+add   $3, $1, $2     #overflow
 
 addu  $4, $1, $2
 
-addi  $5, $1, 0xF    
+addi  $5, $1, 0xF    #overflow
 
 addiu $6, $1, 0xF
- 
-addi  $7, $0, 0xFFFF 
+
+bgtz  $2, 3          # $2 = 1 > 0, so
+
+addi  $7, $0, 0xFFFF #Line 10~12 should not be executed
 
 and   $1, $1, $2
 
 andi  $2, $2, 0
-         
-add   $0, $0, $2     
 
-lw $8 4($0) 
- 
+bgtz  $3, 1          #$3 = 0x10000000 < 0, so line 14 will be executed
+
+add   $0, $0, $2     #write to register 0 error
+lw $8 4($0) # Mem[0]: 0x7FFFFFFF 
 add $0 $0 $0
-
+add $0 $0 $0
 lw $9, 1025($0)
-
+addi $1, $0, 0x7FFF
+addi $9, $8, 1
+addi $9, $8, 1
 addi $9, $8, 1
 
-addi $4, $zero, 2
-	
-addi $1, $1, 1	
+halt
 
-beq $1, $4, 4
+halt
 
-j 0x08	
+halt
 
-addi $2, $zero, 1	
+halt
 
-addi $3, $zero, 1
-
-add $1, $2, $3	
-
-add $2, $1, $3	
-
-add $3, $2, $1		
-
-add $1, $3, $3	
-
-add $1, $2, $2	
-
-add $2, $1, $1	
-
-j 0x44				
-
-j 0x60			
-
-halt			
-
-halt			
-
-halt				
-
-halt			
-
-halt			
-
-j 0x48				
-
-j 0x48
+halt
