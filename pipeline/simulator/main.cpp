@@ -257,9 +257,13 @@ int main() {
         checkForwarding();
         
         snapShotForReg();
-        
+        if(Register::cycle == 59) {
+            printf("in main before update ID_EX.$rt_out = %d\n", ID_EX.$rt_out);
+        }
         update();
-
+        if(Register::cycle == 59) {
+            printf("in main after update ID_EX.$rt_out = %d\n", ID_EX.$rt_out);
+        }
         run_pipeline();
 
         snapShotForStages();
