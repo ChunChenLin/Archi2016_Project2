@@ -159,8 +159,8 @@ void snapShotForReg() {
         //printf("%08X\n", Register::reg[i]);
     }
     
-    if (ID_EX.pc_src_out) {
-        //printf("PC_SRC_OUT...\n");
+    if (ID_EX.pc_branch_out) {
+        //printf("pc_branch_out...\n");
         fprintf(snapshot, "PC: 0x%08X\n", ID_EX.pc_out);
         //printf("PC: 0x%08X\n", ID_EX.pc_out);
         fprintf(snapshot, "IF: 0x");
@@ -186,17 +186,17 @@ void snapShotForReg() {
 void snapShotForStages() {
     if (STALL) {
         fprintf(snapshot, " to_be_stalled");
-    } else if (ID_EX.pc_src_in == 1) {
+    } else if (ID_EX.pc_branch_in == 1) {
         fprintf(snapshot, " to_be_flushed");
     }
     fprintf(snapshot, "\n");
+    
     bool isNOP = false;
-
-    isNOP = (ID_EX.pc_src_out)||(IF_ID.opcode_out==R && IF_ID.funct_out==SLL && IF_ID.rt_out==0 && IF_ID.rd_out==0 && IF_ID.shamt_out==0);
+    isNOP = (ID_EX.pc_branch_out)||(IF_ID.opcode_out==R && IF_ID.funct_out==SLL && IF_ID.rt_out==0 && IF_ID.rd_out==0 && IF_ID.shamt_out==0);
     fprintf(snapshot, "ID: %s%s", (isNOP) ? "NOP" : (IF_ID.opcode_out == R) ? rIns[IF_ID.funct_out] : ins[IF_ID.opcode_out], (STALL) ? " to_be_stalled" : "");
     //if(!STALL && (Forward::rs2ID||Forward::rt2ID))fprintf(snapshot, " fwd_EX-DM_%s_$%d", (Forward::rs2ID) ? "rs" : "rt", (Forward::rs2ID) ? IF_ID.rs_out : IF_ID.rt_out);
-    if (!STALL&&!ID_EX.pc_src_out && Forward::rs2ID) fprintf(snapshot, " fwd_EX-DM_rs_$%u", IF_ID.rs_out);
-    if (!STALL&&!ID_EX.pc_src_out && Forward::rt2ID) fprintf(snapshot, " fwd_EX-DM_rt_$%u", IF_ID.rt_out);
+    if (!STALL&&!ID_EX.pc_branch_out && Forward::rs2ID) fprintf(snapshot, " fwd_EX-DM_rs_$%u", IF_ID.rs_out);
+    if (!STALL&&!ID_EX.pc_branch_out && Forward::rt2ID) fprintf(snapshot, " fwd_EX-DM_rt_$%u", IF_ID.rt_out);
     fprintf(snapshot, "\n");
 
     isNOP = ID_EX.opcode_out==R && ID_EX.funct_out==SLL && ID_EX.rt_out==0 && ID_EX.rd_out==0 && ID_EX.shamt_out==0;
@@ -222,11 +222,6 @@ void initialize() {
     memset(&DM_WB, 0, sizeof(DM_WB));
 }
 
-/*bool detectHalt() {
-    if ((Terminal::IF_HALT && Terminal::ID_HALT && Terminal::EX_HALT && Terminal::DM_HALT && Terminal::WB_HALT) || (Terminal::memoryOverflow || Terminal::dataMisaaligned)) return true;
-    else return false;
-}*/
-
 int main() {
     initialize();
 
@@ -246,24 +241,21 @@ int main() {
 	Terminal::dataMisaaligned = false;
 
     
-    setInstructions();
+    setInstructions(); //fast transform
 
     // IF instr-> detect stall -> snapshot -> assign reg memory ->  move buffer
     while(!(Terminal::WB_HALT || Terminal::memoryOverflow || Terminal::dataMisaaligned)) {
         Terminal::write2Zero = false;
         Terminal::numberOverflow = false;
         
-        checkStall();
-        checkForwarding();
-        
         snapShotForReg();
-        if(Register::cycle == 59) {
+        /*if(Register::cycle == 59) {
             printf("in main before update ID_EX.$rt_out = %d\n", ID_EX.$rt_out);
-        }
+        }*/
         update();
-        if(Register::cycle == 59) {
+        /*if(Register::cycle == 59) {
             printf("in main after update ID_EX.$rt_out = %d\n", ID_EX.$rt_out);
-        }
+        }*/
         run_pipeline();
 
         snapShotForStages();

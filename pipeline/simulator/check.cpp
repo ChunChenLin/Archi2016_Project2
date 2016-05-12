@@ -2,7 +2,7 @@
 
 void checkStall() {
 	STALL = false;
-	if (ID_EX.pc_src_out == 1) return;
+	if (ID_EX.pc_branch_out == 1) return;
 
 	bool IDLoad = (ID_EX.opcode_out == LW || ID_EX.opcode_out == LH || ID_EX.opcode_out == LHU || ID_EX.opcode_out == LB || ID_EX.opcode_out == LBU);
 	bool EXLoad = (EX_DM.opcode_out == LW || EX_DM.opcode_out == LH || EX_DM.opcode_out == LHU || EX_DM.opcode_out == LB || EX_DM.opcode_out == LBU);
@@ -82,8 +82,30 @@ void checkStall() {
 	}
 }
 
-void checkForwarding() {
-	//checkFwdToEx
+void checkForwardToID() {
+	Forward::rs2ID = false;
+	Forward::rt2ID = false;
+
+	bool EXwriteReg = (EX_DM.opcode_out == R && EX_DM.funct_out != JR) || (EX_DM.opcode_out != R && EX_DM.opcode_out != HALT && EX_DM.opcode_out != J && EX_DM.opcode_out != BGTZ && EX_DM.opcode_out != BNE && EX_DM.opcode_out != BEQ && EX_DM.opcode_out != SB && EX_DM.opcode_out != SW && EX_DM.opcode_out != SH);
+	if (IF_ID.opcode_out == BEQ || IF_ID.opcode_out == BNE) {
+		if (EXwriteReg && (EX_DM.reg_to_write_out != 0)) {		
+			if(EX_DM.reg_to_write_out == IF_ID.rt_out) Forward::rt2ID = true;
+			if(EX_DM.reg_to_write_out == IF_ID.rs_out) Forward::rs2ID = true;
+		}
+	} 
+	else if (IF_ID.opcode_out == BGTZ) {
+		if (EXwriteReg && (EX_DM.reg_to_write_out != 0)) {
+		 	if(EX_DM.reg_to_write_out == IF_ID.rs_out) Forward::rs2ID = true;
+		}
+	} 
+	else if (IF_ID.opcode_out == R && IF_ID.funct_out == JR) {
+		if (EXwriteReg && (EX_DM.reg_to_write_out != 0)) {
+			if(EX_DM.reg_to_write_out == IF_ID.rs_out) Forward::rs2ID = true;
+		}
+	}
+}
+
+void checkForwardToEX() {
 	Forward::rs2EX = false;
 	Forward::rt2EX = false;
 
@@ -115,25 +137,5 @@ void checkForwarding() {
 			if(EX_DM.reg_to_write_out == ID_EX.rt_out) Forward::rt2EX = true;
 		}
 		
-	}
-
-	//checkFwdToId
-	Forward::rs2ID = false;
-	Forward::rt2ID = false;
-	if (IF_ID.opcode_out == BEQ || IF_ID.opcode_out == BNE) {
-		if (EXwriteReg && (EX_DM.reg_to_write_out != 0)) {		
-			if(EX_DM.reg_to_write_out == IF_ID.rt_out) Forward::rt2ID = true;
-			if(EX_DM.reg_to_write_out == IF_ID.rs_out) Forward::rs2ID = true;
-		}
-	} 
-	else if (IF_ID.opcode_out == BGTZ) {
-		if (EXwriteReg && (EX_DM.reg_to_write_out != 0)) {
-		 	if(EX_DM.reg_to_write_out == IF_ID.rs_out) Forward::rs2ID = true;
-		}
-	} 
-	else if (IF_ID.opcode_out == R && IF_ID.funct_out == JR) {
-		if (EXwriteReg && (EX_DM.reg_to_write_out != 0)) {
-			if(EX_DM.reg_to_write_out == IF_ID.rs_out) Forward::rs2ID = true;
-		}
 	}
 }

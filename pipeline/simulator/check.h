@@ -6,6 +6,10 @@
 
 void checkStall();
 
-void checkForwarding();
+//void checkForwarding();
+
+void checkForwardToID();
+
+void checkForwardToEX();
 
 #endif

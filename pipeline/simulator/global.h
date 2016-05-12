@@ -33,7 +33,7 @@ public:
 };
 
 typedef struct _Buffer {
-    unsigned ins_reg_in, ins_reg_out;
+    unsigned inst_in, inst_out;
 	unsigned pc_plus_four_in, pc_plus_four_out;
 
 	unsigned opcode_in, opcode_out;
@@ -49,7 +49,7 @@ typedef struct _Buffer {
 	unsigned $rt_in, $rt_out;
 	unsigned extended_imme_in, extended_imme_out;
 
-	bool pc_src_in, pc_src_out;
+	bool pc_branch_in, pc_branch_out;
 
 	unsigned pc_in, pc_out;
 	unsigned reg_to_write_in, reg_to_write_out;

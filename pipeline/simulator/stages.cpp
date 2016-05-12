@@ -44,19 +44,19 @@ void IF() {
 		//printf("IF STALL .....\n");
 		return;
 	}
-	if (ID_EX.pc_src_out == 1) {
+	if (ID_EX.pc_branch_out == 1) {
 		Register::PC = ID_EX.pc_out;
-		//printf("ID_EX.pc_src_out=1, PC= 0x%08X\n",Register::PC);
+		//printf("ID_EX.pc_branch_out=1, PC= 0x%08X\n",Register::PC);
 	}
 	else {
 		Register::PC = IF_ID.pc_plus_four_out;
-		//printf("ID_EX.pc_src_out=0, IF_ID.pc_plus_four_out=0x%08X, PC= 0x%08X\n",IF_ID.pc_plus_four_out,Register::PC);
+		//printf("ID_EX.pc_branch_out=0, IF_ID.pc_plus_four_out=0x%08X, PC= 0x%08X\n",IF_ID.pc_plus_four_out,Register::PC);
 	}
 
 	//printf("PC: 0x%08X\n", Register::PC);
 
 	for (int i = 0; i < 4; i++)
-		IF_ID.ins_reg_in = (IF_ID.ins_reg_in << 8) | (unsigned char) Memory::IMemory[Register::PC + i];
+		IF_ID.inst_in = (IF_ID.inst_in << 8) | (unsigned char) Memory::IMemory[Register::PC + i];
 
 	unsigned t1, t2;
 	IF_ID.opcode_in = Memory::IMemory[Register::PC];
@@ -86,8 +86,10 @@ void IF() {
 }
 
 void ID() {
+	checkStall();
+
 	if (STALL) return;
-	if (ID_EX.pc_src_out) {
+	if (ID_EX.pc_branch_out) { // need to branch
 		ID_EX.pc_plus_four_in = 0;
 		ID_EX.opcode_in = 0;
 		ID_EX.funct_in = 0;
@@ -95,7 +97,7 @@ void ID() {
 		ID_EX.rs_in = 0;
 		ID_EX.rt_in = 0;
 		ID_EX.rd_in = 0;
-		ID_EX.pc_src_in = 0;
+		ID_EX.pc_branch_in = 0;
 		ID_EX.pc_in = 0;
 		ID_EX.reg_to_write_in = 0;
 		ID_EX.$rs_in = 0;
@@ -105,53 +107,41 @@ void ID() {
 		return;
 	}
 
-	if (Forward::rs2ID) ID_EX.$rs_in = EX_DM.alu_result_out;
-	else ID_EX.$rs_in = Register::reg[ID_EX.rs_in];
+	checkForwardToID();
+	ID_EX.$rs_in = (Forward::rs2ID) ? EX_DM.alu_result_out : Register::reg[ID_EX.rs_in];
+	ID_EX.$rt_in = (Forward::rt2ID) ? EX_DM.alu_result_out : Register::reg[ID_EX.rt_in];
 	
-	if (Forward::rt2ID) ID_EX.$rt_in = EX_DM.alu_result_out;
-	else ID_EX.$rt_in = Register::reg[ID_EX.rt_in];
+	ID_EX.extended_imme_in = (short)IF_ID.inst_out << 16 >> 16;
 
-	if(Register::cycle == 58) {
-		printf("ID_EX.rt_in = %d reg %d\n", ID_EX.rt_in, Register::reg[ID_EX.rt_in]);
-	}
-	//short temp = IF_ID.ins_reg_out << 16 >> 16;
-	ID_EX.extended_imme_in = (short)IF_ID.ins_reg_out << 16 >> 16;
+	ID_EX.pc_branch_in = 0;
+	/* Branch */
+	if (ID_EX.opcode_in == BGTZ) {
+		if ((int)ID_EX.$rs_in > 0) {
+			ID_EX.pc_branch_in = 1;
+			ID_EX.pc_in = IF_ID.pc_plus_four_out + 4 * ID_EX.extended_imme_in;
+		}
+	} else if (ID_EX.opcode_in == BNE) {
+		if (ID_EX.$rs_in != ID_EX.$rt_in) {
+			ID_EX.pc_branch_in = 1;
+			ID_EX.pc_in = IF_ID.pc_plus_four_out + 4 * ID_EX.extended_imme_in;
+		}
+	} else if (ID_EX.opcode_in == BEQ) {
+		if (ID_EX.$rs_in == ID_EX.$rt_in) {
+			ID_EX.pc_branch_in = 1;
+			ID_EX.pc_in = IF_ID.pc_plus_four_out + 4 * ID_EX.extended_imme_in;
+		}
+	} else if (ID_EX.opcode_in == J || ID_EX.opcode_in == JAL) {
+		unsigned address = IF_ID.inst_out << 6 >> 6;
+		ID_EX.pc_branch_in = 1;
+		ID_EX.pc_in = (IF_ID.pc_plus_four_out >> 28 << 28) | (address << 2);
+	} else if (ID_EX.opcode_in == R && ID_EX.funct_in == JR) {
+		ID_EX.pc_branch_in = 1;
+		ID_EX.pc_in = ID_EX.$rs_in;
+	} 
 
 	if (ID_EX.opcode_in != R && ID_EX.opcode_in != JAL) ID_EX.reg_to_write_in = ID_EX.rt_in;
 	else if (ID_EX.opcode_in == R) ID_EX.reg_to_write_in = ID_EX.rd_in;
 	else if (ID_EX.opcode_in == JAL) ID_EX.reg_to_write_in = 31;
-
-	/* Branch */
-	if (ID_EX.opcode_in == BEQ) {
-		if (ID_EX.$rs_in == ID_EX.$rt_in) {
-			ID_EX.pc_src_in = 1;
-			ID_EX.pc_in = IF_ID.pc_plus_four_out + 4 * ID_EX.extended_imme_in;
-		} 
-		else ID_EX.pc_src_in = 0;
-	} else if (ID_EX.opcode_in == BNE) {
-		if (ID_EX.$rs_in != ID_EX.$rt_in) {
-			ID_EX.pc_src_in = 1;
-			ID_EX.pc_in = IF_ID.pc_plus_four_out + 4 * ID_EX.extended_imme_in;
-		} 
-		else ID_EX.pc_src_in = 0;
-	} else if (ID_EX.opcode_in == BGTZ) {
-		if ((int)ID_EX.$rs_in > 0) {
-			ID_EX.pc_src_in = 1;
-			ID_EX.pc_in = IF_ID.pc_plus_four_out + 4 * ID_EX.extended_imme_in;
-		} 
-		else ID_EX.pc_src_in = 0;
-	} else if (ID_EX.opcode_in == J || ID_EX.opcode_in == JAL) {
-		unsigned address = IF_ID.ins_reg_out << 6 >> 6;
-		ID_EX.pc_src_in = 1;
-		ID_EX.pc_in = (IF_ID.pc_plus_four_out >> 28 << 28) | (address << 2);
-	} else if (ID_EX.opcode_in == R && ID_EX.funct_in == JR) {
-		ID_EX.pc_src_in = 1;
-		ID_EX.pc_in = ID_EX.$rs_in;
-	} else ID_EX.pc_src_in = 0;
-
-	if(Register::cycle == 58) {
-		printf("ID_EX.$rt_in = %d\n", ID_EX.$rt_in);
-	}
 }
 
 void EX() {
@@ -160,6 +150,8 @@ void EX() {
 		printf(" in EX before c59 ID_EX.extended_imme_out = %d ID_EX.$rt_out %d\n", ID_EX.extended_imme_out, ID_EX.$rt_out);
 	}
 	int tmp = ID_EX.$rt_out;
+
+	checkForwardToEX();
 
 	unsigned left, right;
 	if (EX_DM.opcode_in == SW || EX_DM.opcode_in == SH || EX_DM.opcode_in == SB) {
@@ -313,6 +305,7 @@ void DM() {
 	unsigned t1, t2, t3, t4;
 	int inT1, inT2, inT3, inT4;
 
+	if(EX_DM.opcode_out == R) return; /* only load, store */
 	
 	switch(EX_DM.opcode_out) {	
 		case LW: 
@@ -334,7 +327,6 @@ void DM() {
 				printf("DM_WB.read_data_in = %d\n", DM_WB.read_data_in);
 				printf("EX_DM.alu_result_out = %d\n", EX_DM.alu_result_out);
 			}
-
 			break;
 		case LH: 
 			isMemoryOverflow = detectMemoryOverflow(1);
@@ -376,10 +368,6 @@ void DM() {
 			isMemoryOverflow = detectMemoryOverflow(3);
 			isDataMisaaligned = detectDataMisaaligned(3);
 			if(!isMemoryOverflow && !isDataMisaaligned) {
-				/*Memory::DMemory[EX_DM.alu_result_out] = EX_DM.write_data_out >> 24;
-				Memory::DMemory[EX_DM.alu_result_out + 1] = (EX_DM.write_data_out >> 16) & 0xff;
-				Memory::DMemory[EX_DM.alu_result_out + 2] = (EX_DM.write_data_out >> 8) & 0xff;
-				Memory::DMemory[EX_DM.alu_result_out + 3] = (EX_DM.write_data_out) & 0xff;*/
 				Memory::DMemory[EX_DM.alu_result_out] = EX_DM.write_data_out >> 24;
 				Memory::DMemory[EX_DM.alu_result_out + 1] = EX_DM.write_data_out << 8 >> 24;
 				Memory::DMemory[EX_DM.alu_result_out + 2] = EX_DM.write_data_out << 16 >> 24;
@@ -419,6 +407,7 @@ void WB() {
 
 	bool writeBackReg = (DM_WB.opcode_out == R && DM_WB.funct_out != JR) || (DM_WB.opcode_out != R && DM_WB.opcode_out != HALT && DM_WB.opcode_out != J && DM_WB.opcode_out != BGTZ && DM_WB.opcode_out != BNE && DM_WB.opcode_out != BEQ && DM_WB.opcode_out != SB && DM_WB.opcode_out != SW && DM_WB.opcode_out != SH);
 	if (writeBackReg) {
+		/*load*/
 		if (DM_WB.opcode_out == LW || DM_WB.opcode_out == LH || DM_WB.opcode_out == LHU || DM_WB.opcode_out == LB || DM_WB.opcode_out == LBU) {
 			Register::reg[DM_WB.reg_to_write_out] = DM_WB.read_data_out;
 		}
@@ -473,7 +462,7 @@ void move() {
 		ID_EX.$rt_out = 0;
 		ID_EX.extended_imme_out = 0;
 
-		ID_EX.pc_src_out = 0;
+		ID_EX.pc_branch_out = 0;
 		ID_EX.pc_out = 0;
 		ID_EX.reg_to_write_out = 0;
 
@@ -490,7 +479,7 @@ void move() {
 		ID_EX.$rt_out = ID_EX.$rt_in;
 		ID_EX.extended_imme_out = ID_EX.extended_imme_in;
 
-		ID_EX.pc_src_out = ID_EX.pc_src_in;
+		ID_EX.pc_branch_out = ID_EX.pc_branch_in;
 		ID_EX.pc_out = ID_EX.pc_in;
 		ID_EX.reg_to_write_out = ID_EX.reg_to_write_in;
 
@@ -502,7 +491,7 @@ void move() {
 	//IF2ID
 	if (STALL) return;
 	IF_ID.pc_plus_four_out = IF_ID.pc_plus_four_in;
-	IF_ID.ins_reg_out = IF_ID.ins_reg_in;
+	IF_ID.inst_out = IF_ID.inst_in;
 
 	IF_ID.opcode_out = IF_ID.opcode_in;
 	IF_ID.rs_out = IF_ID.rs_in;
